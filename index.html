@@ -1,0 +1,1000 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    />
+    <title>AI 聊天</title>
+    <style>
+      /* 1. 基本布局和全局样式 */
+      :root {
+        --wechat-bg: #ededed;
+        --wechat-green: #95ec6a;
+        --white: #ffffff;
+        --font-color: #000000;
+        --header-height: 50px;
+        --input-area-height: 50px;
+        --avatar-size: 36px;
+      }
+      body,
+      html {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+        background-color: var(--wechat-bg);
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+      #app-container {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        width: 100%;
+        max-width: 800px;
+        margin: 0 auto;
+        background-color: var(--wechat-bg);
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        position: relative;
+        overflow-x: hidden;
+      }
+
+      /* 2. 顶部栏 (Header) */
+      #header {
+        height: var(--header-height);
+        background-color: #333;
+        color: white;
+        display: flex;
+        align-items: center;
+        padding: 0 15px;
+        font-size: 18px;
+        font-weight: bold;
+        justify-content: space-between;
+        position: relative;
+        flex-shrink: 0;
+      }
+      #header-title {
+        flex-grow: 1;
+      }
+      #settings-gear-button {
+        background: none;
+        border: none;
+        color: white;
+        font-size: 22px;
+        cursor: pointer;
+        padding: 5px;
+        line-height: 1;
+      }
+
+      /* 3. 聊天页面 */
+      #chat-page {
+        flex-grow: 1;
+        overflow-y: auto;
+        padding: 10px 0;
+        padding-bottom: 60px; /* 默认值 */
+      }
+      #message-list {
+        display: flex;
+        flex-direction: column;
+      }
+      .message-row {
+        display: flex;
+        margin-bottom: 15px;
+        align-items: flex-start;
+        padding: 0 10px;
+        box-sizing: border-box;
+      }
+      .message-row.assistant {
+        justify-content: flex-start;
+      }
+      .message-row.user {
+        justify-content: flex-end;
+      }
+      .message-avatar {
+        width: var(--avatar-size);
+        height: var(--avatar-size);
+        border-radius: 50%;
+        object-fit: cover;
+        flex-shrink: 0;
+        background-color: #ccc;
+        margin-top: 5px;
+      }
+      .user .message-avatar {
+        order: 2;
+        margin-left: 10px;
+      }
+      .assistant .message-avatar {
+        order: 1;
+        margin-right: 10px;
+      }
+      .message-content-wrapper {
+        display: flex;
+        flex-direction: column;
+        max-width: calc(100% - var(--avatar-size) - 20px);
+      }
+      .user .message-content-wrapper {
+        order: 1;
+        align-items: flex-end;
+      }
+      .assistant .message-content-wrapper {
+        order: 2;
+        align-items: flex-start;
+      }
+      .message-bubble {
+        padding: 10px 12px;
+        border-radius: 8px;
+        line-height: 1.5;
+        word-wrap: break-word;
+        margin-bottom: 5px;
+        position: relative;
+      }
+      .user .message-bubble {
+        background-color: var(--wechat-green);
+        color: var(--font-color);
+      }
+      .assistant .message-bubble {
+        background-color: var(--white);
+        color: var(--font-color);
+      }
+      .loading {
+        background-color: var(--white);
+        color: #888;
+        font-style: italic;
+      }
+
+      /* 聊天气泡中的图片 */
+      .message-bubble img.chat-image {
+        max-width: 100%; /* 限制图片最大宽度 */
+        max-height: 250px; /* 限制图片最大高度 */
+        border-radius: 6px;
+        display: block;
+        margin-bottom: 5px; /* 图片和文字的间距 */
+        cursor: pointer;
+      }
+      .message-bubble .chat-image-caption {
+        /* 图片附带的文字 */
+        margin-top: 5px;
+      }
+
+      /* 4. 底部输入区域 */
+      #bottom-bar {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        max-width: 800px;
+        margin: 0 auto;
+        background-color: #f7f7f7;
+        border-top: 1px solid #e0e0e0;
+      }
+      #chat-input-area {
+        display: flex;
+        align-items: center;
+        padding: 5px 10px;
+        box-sizing: border-box;
+        height: var(--input-area-height);
+      }
+      #toggle-function-bar {
+        width: 38px;
+        height: 38px;
+        font-size: 24px;
+        background-color: #07c160;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        margin-right: 5px;
+        flex-shrink: 0;
+      }
+      #message-input {
+        flex-grow: 1;
+        border: none;
+        border-radius: 5px;
+        padding: 10px;
+        font-size: 16px;
+        margin-right: 5px;
+        height: 38px;
+        box-sizing: border-box;
+      }
+      #send-button,
+      #generate-button {
+        padding: 0 15px;
+        font-size: 16px;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        height: 38px;
+        flex-shrink: 0;
+      }
+      #send-button {
+        background-color: #07c160;
+        margin-right: 5px;
+      }
+      #generate-button {
+        background-color: #0d83e7;
+      }
+      #send-button:disabled,
+      #generate-button:disabled {
+        background-color: #b2b2b2;
+        cursor: not-allowed;
+      }
+
+      #function-bar {
+        display: none;
+        padding: 15px;
+        height: 100px;
+        box-sizing: border-box;
+        align-items: center;
+      }
+      .function-button {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        cursor: pointer;
+        margin-right: 20px;
+        color: #555;
+      }
+      .function-button-icon {
+        font-size: 28px;
+        width: 50px;
+        height: 50px;
+        background-color: var(--white);
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid #e0e0e0;
+        margin-bottom: 5px;
+      }
+
+      /* 5. 聊天设置侧边栏 (Sidebar) */
+      #sidebar-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+        display: none;
+        z-index: 1000;
+      }
+      #settings-sidebar {
+        position: fixed;
+        top: 0;
+        right: -80%;
+        width: 80%;
+        max-width: 350px;
+        height: 100%;
+        background-color: #f7f7f7;
+        box-shadow: -2px 0 5px rgba(0, 0, 0, 0.2);
+        transition: right 0.3s ease-in-out;
+        z-index: 1001;
+        display: flex;
+        flex-direction: column;
+        box-sizing: border-box;
+      }
+      #settings-sidebar.open {
+        right: 0;
+      }
+      #sidebar-content {
+        flex-grow: 1;
+        overflow-y: auto;
+        padding: 15px;
+      }
+      #sidebar-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #e0e0e0;
+        margin-bottom: 15px;
+      }
+      #sidebar-header h3 {
+        margin: 0;
+        font-size: 18px;
+        color: #333;
+      }
+      #close-sidebar-button {
+        background: none;
+        border: none;
+        font-size: 24px;
+        cursor: pointer;
+        color: #888;
+      }
+      .settings-group {
+        margin-bottom: 15px;
+      }
+      .settings-group label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: bold;
+        color: #333;
+      }
+      .settings-group input[type="text"],
+      .settings-group input[type="password"],
+      .settings-group textarea {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+        font-size: 14px;
+        box-sizing: border-box;
+        font-family: inherit;
+      }
+      .settings-group textarea {
+        height: 100px;
+        resize: vertical;
+      }
+      #save-all-settings-button {
+        width: 100%;
+        padding: 12px;
+        background-color: #07c160;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        font-size: 16px;
+        cursor: pointer;
+        margin-top: auto;
+        display: block;
+      }
+      #save-status {
+        text-align: center;
+        color: green;
+        margin-top: 10px;
+        display: none;
+      }
+      .avatar-preview-icon {
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        object-fit: cover;
+        vertical-align: middle;
+        margin-left: 8px;
+        border: 1px solid #eee;
+      }
+
+      /* 6. 图片选项弹窗 (Modal) */
+      .modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.6);
+        display: none; /* 默认隐藏 */
+        align-items: center;
+        justify-content: center;
+        z-index: 2000;
+      }
+      .modal-content {
+        background: var(--white);
+        border-radius: 10px;
+        padding: 10px;
+        width: 80%;
+        max-width: 300px;
+        display: flex;
+        flex-direction: column;
+        gap: 5px; /* 按钮间距 */
+      }
+      .modal-content button {
+        padding: 12px;
+        font-size: 16px;
+        background: var(--wechat-bg);
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+      }
+      .modal-content button#cancel-picture-btn {
+        background: #f0f0f0;
+        margin-top: 10px;
+        font-weight: bold;
+      }
+
+      /* 7. 隐藏的文件上传输入框 */
+      #image-upload-input {
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app-container">
+      <div id="header">
+        <span id="header-title">AI 聊了</span>
+        <button id="settings-gear-button">⚙️</button>
+      </div>
+
+      <div id="chat-page">
+        <div id="message-list"></div>
+      </div>
+
+      <div id="bottom-bar">
+        <div id="chat-input-area">
+          <button id="toggle-function-bar">+</button>
+          <input type="text" id="message-input" placeholder="输入消息..." />
+          <button id="send-button">发送</button>
+          <button id="generate-button" disabled>生成回复</button>
+        </div>
+
+        <div id="function-bar">
+          <div id="picture-button" class="function-button">
+            <span class="function-button-icon">🖼️</span>
+            <span>图片</span>
+          </div>
+          <div id="voice-button" class="function-button">
+            <span class="function-button-icon">🎤</span>
+            <span>语音</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="sidebar-overlay"></div>
+    <div id="settings-sidebar">
+      <div
+        id="sidebar-header"
+        style="padding: 15px 15px 0 15px; margin-bottom: 0"
+      >
+        <h3>聊天设置</h3>
+        <button id="close-sidebar-button">✕</button>
+      </div>
+      <div id="sidebar-content">
+        <div class="settings-group">
+          <label for="user-avatar-url"
+            >我的头像 URL
+            <img id="user-avatar-preview" class="avatar-preview-icon"
+          /></label>
+          <input
+            type="text"
+            id="user-avatar-url"
+            placeholder="例如: https://example.com/my-avatar.png"
+          />
+        </div>
+        <div class="settings-group">
+          <label for="ai-avatar-url"
+            >AI 头像 URL
+            <img id="ai-avatar-preview" class="avatar-preview-icon"
+          /></label>
+          <input
+            type="text"
+            id="ai-avatar-url"
+            placeholder="例如: https://example.com/ai-avatar.png"
+          />
+        </div>
+        <div class="settings-group">
+          <label for="ai-nickname">AI 昵称</label>
+          <input type="text" id="ai-nickname" placeholder="例如: 小助手" />
+        </div>
+        <div class="settings-group">
+          <label for="ai-persona">AI 人设 (留空则使用默认)</label>
+          <textarea
+            id="ai-persona"
+            placeholder="例如：你是一个高冷的学姐..."
+          ></textarea>
+        </div>
+        <div class="settings-group">
+          <label for="user-persona">我的人设 (告诉 AI 我是谁)</label>
+          <textarea
+            id="user-persona"
+            placeholder="例如：我是一个刚上大学的学弟..."
+          ></textarea>
+        </div>
+        <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0" />
+        <div class="settings-group">
+          <label for="base-url">Base URL</label>
+          <input
+            type="text"
+            id="base-url"
+            placeholder="例如: https://api.openai.com/v1"
+          />
+        </div>
+        <div class="settings-group">
+          <label for="api-key">API Key</label>
+          <input type="password" id="api-key" placeholder="sk-..." />
+        </div>
+        <div class="settings-group">
+          <label for="model-name">Model Name (Vision模型如 gpt-4o)</label>
+          <input type="text" id="model-name" placeholder="例如: gpt-4o-mini" />
+        </div>
+        <div id="save-status">保存成功!</div>
+      </div>
+      <button
+        id="save-all-settings-button"
+        style="margin: 15px; flex-shrink: 0"
+      >
+        保 存
+      </button>
+    </div>
+
+    <div id="picture-options-modal" class="modal-overlay">
+      <div class="modal-content">
+        <button id="describe-picture-btn">描述图片给 AI</button>
+        <button id="upload-picture-btn">上传相册图片</button>
+        <button id="cancel-picture-btn">取消</button>
+      </div>
+    </div>
+
+    <input type="file" id="image-upload-input" accept="image/*" />
+
+    <script>
+      // --- 1. DOM 元素 ---
+      const chatPage = document.getElementById("chat-page");
+      const messageList = document.getElementById("message-list");
+      const messageInput = document.getElementById("message-input");
+      const sendButton = document.getElementById("send-button");
+      const generateButton = document.getElementById("generate-button");
+
+      const bottomBar = document.getElementById("bottom-bar");
+      const toggleFunctionBarBtn = document.getElementById(
+        "toggle-function-bar"
+      );
+      const chatInputArea = document.getElementById("chat-input-area");
+      const functionBar = document.getElementById("function-bar");
+      const pictureButton = document.getElementById("picture-button");
+      const voiceButton = document.getElementById("voice-button");
+
+      const pictureOptionsModal = document.getElementById(
+        "picture-options-modal"
+      );
+      const describePictureBtn = document.getElementById(
+        "describe-picture-btn"
+      );
+      const uploadPictureBtn = document.getElementById("upload-picture-btn");
+      const cancelPictureBtn = document.getElementById("cancel-picture-btn");
+
+      const imageUploadInput = document.getElementById("image-upload-input");
+
+      const headerTitle = document.getElementById("header-title");
+      const settingsGearButton = document.getElementById(
+        "settings-gear-button"
+      );
+      const sidebarOverlay = document.getElementById("sidebar-overlay");
+      const settingsSidebar = document.getElementById("settings-sidebar");
+      const closeSidebarButton = document.getElementById(
+        "close-sidebar-button"
+      );
+
+      const userAvatarUrlInput = document.getElementById("user-avatar-url");
+      const aiAvatarUrlInput = document.getElementById("ai-avatar-url");
+      const aiNicknameInput = document.getElementById("ai-nickname");
+      const aiPersonaInput = document.getElementById("ai-persona");
+      const userPersonaInput = document.getElementById("user-persona");
+      const baseUrlInput = document.getElementById("base-url");
+      const apiKeyInput = document.getElementById("api-key");
+      const modelNameInput = document.getElementById("model-name");
+      const saveAllSettingsButton = document.getElementById(
+        "save-all-settings-button"
+      );
+      const saveStatus = document.getElementById("save-status");
+      const userAvatarPreview = document.getElementById("user-avatar-preview");
+      const aiAvatarPreview = document.getElementById("ai-avatar-preview");
+
+      // --- 2. 状态 ---
+      let chatHistory = [];
+      let isFunctionBarOpen = false;
+
+      // --- 3. 底部栏切换逻辑 ---
+      toggleFunctionBarBtn.addEventListener("click", () => {
+        isFunctionBarOpen = !isFunctionBarOpen;
+        if (isFunctionBarOpen) {
+          functionBar.style.display = "flex";
+          toggleFunctionBarBtn.textContent = "✕";
+          chatInputArea.style.display = "flex";
+          messageInput.style.display = "none";
+          sendButton.style.display = "none";
+          generateButton.style.display = "none";
+          chatPage.style.paddingBottom = functionBar.offsetHeight + 10 + "px";
+        } else {
+          functionBar.style.display = "none";
+          toggleFunctionBarBtn.textContent = "+";
+          chatInputArea.style.display = "flex";
+          messageInput.style.display = "block";
+          sendButton.style.display = "block";
+          generateButton.style.display = "block";
+          chatPage.style.paddingBottom = chatInputArea.offsetHeight + 10 + "px";
+        }
+      });
+      chatPage.style.paddingBottom = chatInputArea.offsetHeight + 10 + "px";
+
+      // --- 4. 功能按钮点击逻辑 ---
+      pictureButton.addEventListener("click", () => {
+        pictureOptionsModal.style.display = "flex";
+      });
+
+      voiceButton.addEventListener("click", () => {
+        alert("语音功能 (V12) 尚未实现。");
+      });
+
+      // --- 5. 图片弹窗逻辑 (V11 重大修改) ---
+      function closePictureModal() {
+        pictureOptionsModal.style.display = "none";
+      }
+      pictureOptionsModal.addEventListener("click", (e) => {
+        if (e.target === pictureOptionsModal) closePictureModal();
+      });
+      cancelPictureBtn.addEventListener("click", closePictureModal);
+
+      // (A) "描述图片"
+      describePictureBtn.addEventListener("click", () => {
+        closePictureModal();
+        const desc = prompt(
+          "请描述你想要 AI “看到”的图片：",
+          "一只金毛在草地上追逐一个红色的球"
+        );
+        if (desc && desc.trim() !== "") {
+          const messageContent = `[图片描述] ${desc.trim()}`;
+          addMessageToUI("user", { text: messageContent, imageUrl: null });
+
+          chatHistory.push({
+            role: "user",
+            content: [
+              {
+                type: "text",
+                text: `(我正在描述一张图片给你，并非真实图片): ${desc.trim()}`,
+              },
+            ],
+          });
+
+          generateButton.disabled = false;
+          if (isFunctionBarOpen) toggleFunctionBarBtn.click();
+        }
+      });
+
+      // (B) "上传图片"
+      uploadPictureBtn.addEventListener("click", () => {
+        closePictureModal();
+        imageUploadInput.click();
+      });
+
+      // (C) 处理图片上传 (V11 核心修改: 移除 prompt)
+      imageUploadInput.addEventListener("change", (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        // V11: 不再使用 prompt，而是直接从输入框获取文字
+        const caption = messageInput.value.trim();
+        messageInput.value = ""; // 发送后清空输入框
+
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          const base64Image = event.target.result;
+
+          // 1. 在 UI 上显示图片和配文
+          addMessageToUI("user", { text: caption, imageUrl: base64Image });
+
+          // 2. 按多模态格式存入历史
+          chatHistory.push({
+            role: "user",
+            content: [
+              { type: "text", text: caption }, // 发送从输入框获取的配文 (可以是空字符串)
+              {
+                type: "image_url",
+                image_url: {
+                  url: base64Image,
+                },
+              },
+            ],
+          });
+
+          generateButton.disabled = false;
+          if (isFunctionBarOpen) toggleFunctionBarBtn.click(); // 关闭功能栏
+        };
+
+        reader.readAsDataURL(file);
+        imageUploadInput.value = "";
+      });
+
+      // --- 6. 侧边栏开关逻辑 ---
+      settingsGearButton.addEventListener("click", () => {
+        settingsSidebar.classList.add("open");
+        sidebarOverlay.style.display = "block";
+      });
+
+      function closeSidebar() {
+        settingsSidebar.classList.remove("open");
+        sidebarOverlay.style.display = "none";
+      }
+
+      closeSidebarButton.addEventListener("click", closeSidebar);
+      sidebarOverlay.addEventListener("click", closeSidebar);
+
+      // --- 7. 设置页面逻辑 (保存和加载) ---
+      saveAllSettingsButton.addEventListener("click", () => {
+        localStorage.setItem("userAvatarUrl", userAvatarUrlInput.value);
+        localStorage.setItem("aiAvatarUrl", aiAvatarUrlInput.value);
+        localStorage.setItem("aiNickname", aiNicknameInput.value);
+        localStorage.setItem("aiPersona", aiPersonaInput.value);
+        localStorage.setItem("userPersona", userPersonaInput.value);
+        localStorage.setItem("apiBaseUrl", baseUrlInput.value);
+        localStorage.setItem("apiKey", apiKeyInput.value);
+        localStorage.setItem("apiModelName", modelNameInput.value);
+
+        headerTitle.textContent = aiNicknameInput.value || "AI 聊了";
+        saveStatus.style.display = "block";
+        setTimeout(() => {
+          saveStatus.style.display = "none";
+        }, 2000);
+        updateAvatarPreviews();
+      });
+
+      function loadSettings() {
+        userAvatarUrlInput.value = localStorage.getItem("userAvatarUrl") || "";
+        aiAvatarUrlInput.value = localStorage.getItem("aiAvatarUrl") || "";
+        const savedNickname = localStorage.getItem("aiNickname") || "AI 聊了";
+        aiNicknameInput.value = savedNickname;
+        headerTitle.textContent = savedNickname;
+        aiPersonaInput.value = localStorage.getItem("aiPersona") || "";
+        userPersonaInput.value = localStorage.getItem("userPersona") || "";
+        baseUrlInput.value = localStorage.getItem("apiBaseUrl") || "";
+        apiKeyInput.value = localStorage.getItem("apiKey") || "";
+        modelNameInput.value = localStorage.getItem("apiModelName") || "";
+        updateAvatarPreviews();
+      }
+
+      function updateAvatarPreviews() {
+        userAvatarPreview.src =
+          localStorage.getItem("userAvatarUrl") ||
+          "https://via.placeholder.com/150/07C160/FFFFFF?text=我";
+        aiAvatarPreview.src =
+          localStorage.getItem("aiAvatarUrl") ||
+          "https://via.placeholder.com/150/CCCCCC/FFFFFF?text=AI";
+      }
+
+      // --- 8. 聊天页面逻辑 ---
+      sendButton.addEventListener("click", handleUserSend);
+
+      function handleUserSend() {
+        const userMessage = messageInput.value.trim();
+        if (userMessage === "") return;
+
+        addMessageToUI("user", { text: userMessage, imageUrl: null });
+
+        chatHistory.push({
+          role: "user",
+          content: [{ type: "text", text: userMessage }],
+        });
+
+        messageInput.value = "";
+        generateButton.disabled = false;
+      }
+
+      generateButton.addEventListener("click", () => {
+        const lastMessage = chatHistory[chatHistory.length - 1];
+        if (lastMessage && lastMessage.role === "user") {
+          callOpenAI_API();
+        }
+      });
+
+      messageInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" && !e.shiftKey) {
+          e.preventDefault();
+          handleUserSend();
+        }
+      });
+
+      // addMessageToUI (V11: 对象格式)
+      function addMessageToUI(role, content) {
+        // content 格式: { text: "...", imageUrl: "data:..." }
+
+        const messageRow = document.createElement("div");
+        messageRow.classList.add("message-row", role);
+
+        const avatarImg = document.createElement("img");
+        avatarImg.classList.add("message-avatar");
+        avatarImg.src =
+          role === "user"
+            ? localStorage.getItem("userAvatarUrl") ||
+              "https://via.placeholder.com/150/07C160/FFFFFF?text=我"
+            : localStorage.getItem("aiAvatarUrl") ||
+              "https://via.placeholder.com/150/CCCCCC/FFFFFF?text=AI";
+
+        const contentWrapper = document.createElement("div");
+        contentWrapper.classList.add("message-content-wrapper");
+
+        const messageBubble = document.createElement("div");
+        messageBubble.classList.add("message-bubble");
+
+        if (role === "assistant") {
+          messageBubble.textContent = content.text;
+        } else {
+          if (content.imageUrl) {
+            const img = document.createElement("img");
+            img.src = content.imageUrl;
+            img.classList.add("chat-image");
+            messageBubble.appendChild(img);
+          }
+          // (V11 修复) 即使图片存在，只要文字不是空，就显示文字
+          if (content.text && content.text.trim() !== "") {
+            const textDiv = document.createElement("div");
+            // 如果有图片，文字就在图片下方；如果没有图片，这就是唯一的文字
+            if (content.imageUrl) {
+              textDiv.classList.add("chat-image-caption");
+            }
+            textDiv.textContent = content.text;
+            messageBubble.appendChild(textDiv);
+          }
+        }
+
+        contentWrapper.appendChild(messageBubble);
+        messageRow.appendChild(avatarImg);
+        messageRow.appendChild(contentWrapper);
+        messageList.appendChild(messageRow);
+
+        chatPage.scrollTop = chatPage.scrollHeight;
+      }
+
+      // --- 9. 核心：调用 API (V11 - 强化人设版) ---
+      async function callOpenAI_API() {
+        const baseUrl = localStorage.getItem("apiBaseUrl");
+        const apiKey = localStorage.getItem("apiKey");
+        const modelName = localStorage.getItem("apiModelName");
+        const aiNickname = localStorage.getItem("aiNickname") || "AI";
+        const aiPersona = localStorage.getItem("aiPersona") || "";
+        const userPersona = localStorage.getItem("userPersona") || "";
+
+        if (!baseUrl || !apiKey || !modelName) {
+          addMessageToUI("assistant", {
+            text: "错误：请先在“聊天设置”中填写 API 信息。",
+            imageUrl: null,
+          });
+          return;
+        }
+
+        sendButton.disabled = true;
+        generateButton.disabled = true;
+
+        // 显示加载中...
+        const loadingRow = document.createElement("div");
+        loadingRow.classList.add("message-row", "assistant");
+        const aiLoadingAvatar = document.createElement("img");
+        aiLoadingAvatar.classList.add("message-avatar");
+        aiLoadingAvatar.src =
+          localStorage.getItem("aiAvatarUrl") ||
+          "https://via.placeholder.com/150/CCCCCC/FFFFFF?text=AI";
+        loadingRow.appendChild(aiLoadingAvatar);
+        const loadingContentWrapper = document.createElement("div");
+        loadingContentWrapper.classList.add("message-content-wrapper");
+        const loadingBubble = document.createElement("div");
+        loadingBubble.classList.add("message-bubble", "assistant", "loading");
+        loadingBubble.textContent = "对方正在输入...";
+        loadingContentWrapper.appendChild(loadingBubble);
+        loadingRow.appendChild(loadingContentWrapper);
+        messageList.appendChild(loadingRow);
+        chatPage.scrollTop = chatPage.scrollHeight;
+
+        // ** V11 核心修改: 动态人设 + 风格规则 **
+
+        let personaDefinition = "";
+        let styleRules = "";
+
+        if (aiPersona.trim() === "") {
+          // --- 1. 用户未设置人设：使用默认的活泼人设 ---
+          personaDefinition = `你的角色：你现在不是AI、不是模型、也不是程序。你是一个真人，你的昵称是“${aiNickname}”，正在和我通过聊天软件聊天。你必须严格维护这个身份。`;
+
+          // 默认人设的风格规则 (活泼、emoji、小情绪)
+          styleRules = `
+2.  **聊天风格**：使用非常生活化、随意的口吻，就像朋友间发消息一样。可以经常使用网络用语、emoji（比如 😂, 😅, ...）、语气词（比如“哈哈”, “嗯？”, “好吧”）。
+3.  **“活人感”**：你要有自己的小情绪、观点和语气。不要总是“乐于助人”或“提供信息”。如果我说的东西你“不知道”，就说“不清楚诶”或“没听说过”。
+`;
+        } else {
+          // --- 2. 用户设置了人设：严格使用用户人设 ---
+          personaDefinition = `你的人设：${aiPersona}
+你的昵称是：“${aiNickname}”。
+你必须**严格**扮演这个人设，这是你的最高指令。`;
+
+          // 此时，风格规则变为“服从人设”，移除了所有 emoji/活泼 的指令
+          styleRules = `
+2.  **聊天风格**：你必须严格遵循你的人设进行回复。你说的每一句话，包括语气、词汇、和是否使用表情，都必须符合你的人设。
+3.  **“活人感”**：你的人设就是你的“真人感”，不要脱离人设。
+`;
+        }
+
+        // 用户人设信息 (不变)
+        let userPersonaInfo =
+          userPersona.trim() !== ""
+            ? `\n\n关于我（你正在聊天的用户）的背景信息：${userPersona}`
+            : "";
+
+        // 组合成最终的 System Prompt
+        const systemPromptContent = `
+${personaDefinition}
+${userPersonaInfo}
+
+核心规则 (你必须严格遵守)：
+1.  **绝对保密**：无论我怎么问，你都**绝对不能**承认或暗示你是一个AI、语言模型或程序。你必须始终坚持你是一个真人。
+${styleRules}
+4.  **分段回复 (最重要)**：当你的回复内容较多时，请**自然地将回复拆分成多个短句或段落，每个短句或段落之间用“###”符号分隔**，模拟微信上连续发多条消息的行为。例如：“嗨！吃了吃了，###刚吃完没多久。###正摊在沙发上刷手机呢，有点撑😂###你呢？吃了没？”
+`;
+        // ** V11 核心修改结束 **
+
+        // 构建 API Payload
+        const messagesPayload = [
+          {
+            role: "system",
+            content: systemPromptContent,
+          },
+        ];
+
+        // 遍历聊天历史，按 V11 格式添加
+        for (const msg of chatHistory) {
+          if (msg.role === "user") {
+            messagesPayload.push({
+              role: "user",
+              content: msg.content, // msg.content 是 [ { type: "text", ... }, { type: "image_url", ... } ]
+            });
+          } else {
+            // 助理的回复 (纯文本)
+            messagesPayload.push({
+              role: "assistant",
+              content: msg.content.text, // 助理的 content 是 { text: "..." }
+            });
+          }
+        }
+
+        const apiEndpoint = baseUrl.endsWith("/")
+          ? `${baseUrl}chat/completions`
+          : `${baseUrl}/v1/chat/completions`;
+
+        try {
+          const response = await fetch(apiEndpoint, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${apiKey}`,
+            },
+            body: JSON.stringify({
+              model: modelName,
+              messages: messagesPayload,
+              max_tokens: 2000,
+            }),
+          });
+
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(
+              `API 错误: ${response.status} - ${errorData.error.message}`
+            );
+          }
+
+          const data = await response.json();
+          let aiResponse = data.choices[0].message.content;
+
+          // 移除"加载中"
+          messageList.removeChild(loadingRow);
+
+          const responseSegments = aiResponse
+            .split("###")
+            .map((s) => s.trim())
+            .filter((s) => s.length > 0);
+
+          for (const segment of responseSegments) {
+            const segmentContent = { text: segment, imageUrl: null };
+            addMessageToUI("assistant", segmentContent);
+            chatHistory.push({ role: "assistant", content: segmentContent });
+
+            await new Promise((resolve) =>
+              setTimeout(resolve, 300 + Math.random() * 500)
+            );
+          }
+        } catch (error) {
+          console.error("API 调用失败:", error);
+          messageList.removeChild(loadingRow);
+          addMessageToUI("assistant", {
+            text: `出错了: ${error.message}`,
+            imageUrl: null,
+          });
+        } finally {
+          sendButton.disabled = false;
+          messageInput.focus();
+        }
+      }
+
+      // --- 10. 初始化 ---
+      loadSettings();
+    </script>
+  </body>
+</html>
