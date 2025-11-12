@@ -115,7 +115,7 @@
         }
         .message-bubble .chat-image-caption { margin-top: 5px; }
 
-        /* 4. 底部输入区域 (V12 修改) */
+        /* 4. 底部输入区域 (V13 清理) */
         #bottom-bar {
             position: fixed;
             bottom: 0;
@@ -169,6 +169,7 @@
         #generate-button { background-color: #0d83e7; }
         #send-button:disabled, #generate-button:disabled { background-color: #B2B2B2; cursor: not-allowed; }
 
+        /* 功能栏 (现在只剩图片) */
         #function-bar {
             display: none;
             padding: 15px;
@@ -197,45 +198,6 @@
             margin-bottom: 5px;
         }
         
-        /* V12 新增: 语音输入区域 */
-        #voice-input-area {
-            display: none; /* 默认隐藏 */
-            align-items: center;
-            justify-content: center;
-            padding: 5px 10px;
-            box-sizing: border-box;
-            height: var(--input-area-height);
-        }
-        #hold-to-speak-btn {
-            flex-grow: 1;
-            height: 38px;
-            background-color: #07C160;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            font-size: 16px;
-            font-weight: bold;
-            /* 模拟按下的效果 */
-            user-select: none; /* 防止长按时选中文本 */
-            -webkit-user-select: none;
-        }
-        #hold-to-speak-btn.recording { /* 按下时的样式 */
-            background-color: #059a4c;
-            box-shadow: inset 0 3px 5px rgba(0,0,0,0.2);
-        }
-        #voice-status-text { /* V12 新增: 语音状态提示 */
-            position: fixed;
-            bottom: 60px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(0,0,0,0.7);
-            color: white;
-            padding: 10px 20px;
-            border-radius: 5px;
-            z-index: 3000;
-            display: none; /* 默认隐藏 */
-        }
-
         /* 5. 聊天设置侧边栏 (不变) */
         #sidebar-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
@@ -345,24 +307,14 @@
                 <button id="generate-button" disabled>生成回复</button>
             </div>
             
-            <div id="voice-input-area">
-                <button id="hold-to-speak-btn">按住 说话</button>
-            </div>
-            
             <div id="function-bar">
                 <div id="picture-button" class="function-button">
                     <span class="function-button-icon">🖼️</span>
                     <span>图片</span>
                 </div>
-                <div id="voice-button" class="function-button">
-                    <span class="function-button-icon">🎤</span>
-                    <span>语音</span>
                 </div>
-            </div>
         </div>
     </div>
-
-    <div id="voice-status-text"></div>
 
     <div id="sidebar-overlay"></div>
     <div id="settings-sidebar">
@@ -392,6 +344,7 @@
                 <textarea id="user-persona" placeholder="我是一个刚上大学的学弟..."></textarea>
             </div>
             <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
+            
             <div class="settings-group">
                 <label for="base-url">Base URL</label>
                 <input type="text" id="base-url" placeholder="https://api.openai.com/v1">
@@ -401,7 +354,7 @@
                 <input type="password" id="api-key" placeholder="sk-...">
             </div>
             <div class="settings-group">
-                <label for="model-name">Model Name (Vision模型)</label>
+                <label for="model-name">Model Name (推荐 gpt-4o-mini)</label>
                 <input type="text" id="model-name" placeholder="gpt-4o-mini">
             </div>
             <div id="save-status">保存成功!</div>
@@ -433,13 +386,8 @@
         const chatInputArea = document.getElementById('chat-input-area');
         const functionBar = document.getElementById('function-bar');
         const pictureButton = document.getElementById('picture-button');
-        const voiceButton = document.getElementById('voice-button');
+        // V13: 语音相关 DOM 元素已删除
         
-        // V12 新增
-        const voiceInputArea = document.getElementById('voice-input-area');
-        const holdToSpeakBtn = document.getElementById('hold-to-speak-btn');
-        const voiceStatusText = document.getElementById('voice-status-text');
-
         const pictureOptionsModal = document.getElementById('picture-options-modal');
         const describePictureBtn = document.getElementById('describe-picture-btn');
         const uploadPictureBtn = document.getElementById('upload-picture-btn');
@@ -451,7 +399,6 @@
         const settingsSidebar = document.getElementById('settings-sidebar');
         const closeSidebarButton = document.getElementById('close-sidebar-button');
 
-        // 设置表单元素...
         const userAvatarUrlInput = document.getElementById('user-avatar-url');
         const aiAvatarUrlInput = document.getElementById('ai-avatar-url');
         const aiNicknameInput = document.getElementById('ai-nickname');
@@ -468,17 +415,10 @@
         // --- 2. 状态 ---
         let chatHistory = [];
         let isFunctionBarOpen = false;
-        
-        // V12 新增: 语音录制状态
-        let mediaRecorder;
-        let audioChunks = [];
-        let isRecording = false;
+        // V13: 语音相关状态已删除
 
-        // --- 3. 底部栏切换逻辑 (V12 修改: 增加语音) ---
-        
-        // V12 核心: 当处于语音模式时，按 "键盘" 按钮
+        // --- 3. 底部栏切换逻辑 (V13 简化) ---
         function toggleToTextInput() {
-            voiceInputArea.style.display = 'none';
             functionBar.style.display = 'none';
             chatInputArea.style.display = 'flex';
             toggleFunctionBarBtn.textContent = '+';
@@ -494,38 +434,21 @@
                 functionBar.style.display = 'flex';
                 toggleFunctionBarBtn.textContent = '✕';
                 chatInputArea.style.display = 'none';
-                voiceInputArea.style.display = 'none';
                 chatPage.style.paddingBottom = (functionBar.offsetHeight + 10) + 'px';
-                
             } else if (currentIcon === '✕') { // 当前是功能栏
                 // 关闭功能栏 (返回文本)
                 isFunctionBarOpen = false;
                 toggleToTextInput();
                 chatPage.style.paddingBottom = (chatInputArea.offsetHeight + 10) + 'px';
-                
-            } else if (currentIcon === '⌨️') { // 当前是语音输入
-                // 返回文本输入
-                isFunctionBarOpen = false;
-                toggleToTextInput();
             }
         });
         chatPage.style.paddingBottom = (chatInputArea.offsetHeight + 10) + 'px';
 
-        // --- 4. 功能按钮点击逻辑 (V12 修改: 语音) ---
+        // --- 4. 功能按钮点击逻辑 (V13 简化) ---
         pictureButton.addEventListener('click', () => {
             pictureOptionsModal.style.display = 'flex';
         });
-
-        // V12 核心: 点击 "语音" 按钮
-        voiceButton.addEventListener('click', () => {
-            // 切换到语音输入模式
-            functionBar.style.display = 'none';
-            chatInputArea.style.display = 'none';
-            voiceInputArea.style.display = 'flex'; // 显示 "按住说话"
-            toggleFunctionBarBtn.textContent = '⌨️'; // 按钮变为 "切换回键盘"
-            isFunctionBarOpen = false; // 功能栏是关闭的
-        });
-
+        // V13: 语音按钮的点击事件已删除
 
         // --- 5. 图片弹窗逻辑 (V11 逻辑，不变) ---
         function closePictureModal() {
@@ -542,14 +465,10 @@
             if (desc && desc.trim() !== '') {
                 const messageContent = `[图片描述] ${desc.trim()}`;
                 addMessageToUI('user', { text: messageContent, imageUrl: null });
-                
                 chatHistory.push({ 
                     role: 'user', 
-                    content: [
-                        { type: 'text', text: `(我正在描述一张图片给你，并非真实图片): ${desc.trim()}` }
-                    ]
+                    content: [ { type: 'text', text: `(我正在描述一张图片给你): ${desc.trim()}` } ]
                 });
-                
                 generateButton.disabled = false;
                 if (isFunctionBarOpen) toggleFunctionBarBtn.click();
             }
@@ -580,147 +499,7 @@
             imageUploadInput.value = ''; 
         });
 
-        // --- 6. V12 核心: 语音录制逻辑 ---
-        
-        // 封装状态提示
-        function showVoiceStatus(text) {
-            voiceStatusText.textContent = text;
-            voiceStatusText.style.display = 'block';
-        }
-        function hideVoiceStatus() {
-            voiceStatusText.style.display = 'none';
-        }
-
-        // 6.1: 开始录音 (按下)
-        async function startRecording() {
-            if (isRecording) return;
-            try {
-                // 1. 获取麦克风权限
-                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                isRecording = true;
-                audioChunks = [];
-                
-                // 2. 创建 MediaRecorder
-                mediaRecorder = new MediaRecorder(stream);
-                
-                // 3. 收集音频数据
-                mediaRecorder.addEventListener("dataavailable", event => {
-                    audioChunks.push(event.data);
-                });
-                
-                // 4. 停止录音时的回调 (在 stopRecording 函数中处理)
-                mediaRecorder.addEventListener("stop", handleStopRecording);
-                
-                // 5. 开始录音
-                mediaRecorder.start();
-                
-                // 6. UI 反馈
-                holdToSpeakBtn.textContent = "松开 结束";
-                holdToSpeakBtn.classList.add("recording");
-                showVoiceStatus("正在聆听...");
-
-            } catch (err) {
-                console.error("麦克风权限失败:", err);
-                alert("无法获取麦克风权限。\n请检查你的浏览器设置，并确保你正在 'http://' 或 'https://' (服务器) 上运行本应用，而不是 'file://' 本地文件。");
-                toggleToTextInput(); // 切换回文本
-            }
-        }
-        
-        // 6.2: 停止录音 (松开)
-        function stopRecording() {
-            if (!isRecording || !mediaRecorder) return;
-            
-            // 停止流中的所有轨道，释放麦克风
-            if (mediaRecorder.stream) {
-                mediaRecorder.stream.getTracks().forEach(track => track.stop());
-            }
-
-            mediaRecorder.stop(); // 这会触发 'stop' 事件
-            isRecording = false;
-            holdToSpeakBtn.textContent = "按住 说话";
-            holdToSpeakBtn.classList.remove("recording");
-            showVoiceStatus("识别中...");
-        }
-        
-        // 6.3: (回调) 处理录音数据
-        function handleStopRecording() {
-            // 将收集到的音频块转成 Blob
-            const audioBlob = new Blob(audioChunks, { type: 'audio/webm' }); // 现代浏览器通常是 webm
-            
-            // 创建一个 File 对象 (Whisper API 需要文件名)
-            const audioFile = new File([audioBlob], "recording.webm", {
-                type: 'audio/webm',
-                lastModified: Date.now()
-            });
-
-            // 发送给 Whisper
-            transcribeAudio(audioFile);
-        }
-
-        // 6.4: 发送给 Whisper API
-        async function transcribeAudio(audioFile) {
-            const baseUrl = localStorage.getItem('apiBaseUrl');
-            const apiKey = localStorage.getItem('apiKey');
-            
-            if (!baseUrl || !apiKey) {
-                alert('请先在设置中填写 API 信息');
-                hideVoiceStatus();
-                return;
-            }
-
-            // 确保使用 v1/audio/transcriptions 端点
-            const apiEndpoint = baseUrl.endsWith('/') ? `${baseUrl}audio/transcriptions` : `${baseUrl}/v1/audio/transcriptions`;
-            
-            // Whisper API 使用 FormData, 不是 JSON
-            const formData = new FormData();
-            formData.append('file', audioFile);
-            formData.append('model', 'whisper-1');
-            // formData.append('language', 'zh'); // 可以指定语言提高准确率
-
-            try {
-                const response = await fetch(apiEndpoint, {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${apiKey}`
-                    },
-                    body: formData
-                });
-
-                const data = await response.json();
-
-                if (!response.ok) {
-                    throw new Error(data.error ? data.error.message : 'Whisper API 错误');
-                }
-
-                // 成功！
-                const transcript = data.text;
-                messageInput.value = transcript; // 填入输入框
-                toggleToTextInput(); // 切换回文本模式
-                hideVoiceStatus();
-
-            } catch (error) {
-                console.error("Whisper API 失败:", error);
-                alert(`语音识别失败: ${error.message}`);
-                hideVoiceStatus();
-            }
-        }
-
-        // 6.5: 绑定 "按住" 和 "松开" 事件
-        holdToSpeakBtn.addEventListener('mousedown', startRecording);
-        holdToSpeakBtn.addEventListener('mouseup', stopRecording);
-        holdToSpeakBtn.addEventListener('mouseleave', () => {
-            if(isRecording) stopRecording();
-        });
-        
-        holdToSpeakBtn.addEventListener('touchstart', (e) => {
-            e.preventDefault(); 
-            startRecording();
-        });
-        holdToSpeakBtn.addEventListener('touchend', (e) => {
-            e.preventDefault();
-            stopRecording();
-        });
-
+        // --- 6. V13: 语音录制逻辑已全部删除 ---
 
         // --- 7. 侧边栏开关逻辑 (不变) ---
         settingsGearButton.addEventListener('click', () => {
@@ -804,7 +583,7 @@
             messageRow.classList.add('message-row', role);
             const avatarImg = document.createElement('img');
             avatarImg.classList.add('message-avatar');
-            avatarImg.src = (role === 'user' ? (localStorage.getItem('userAvatarUrl') || 'https://via.placeholder.com/150/07C160/FFFFFF?text=我') : (localStorage.getItem('aiAvatarUrl') || 'https://via.placeholder.com/150/CCCCCC/FFFFFF?text=AI'));
+            avatarImg.src = (role === 'user' ? (localStorage.getItem('userAvatarUrl') || '...') : (localStorage.getItem('aiAvatarUrl') || '...'));
             const contentWrapper = document.createElement('div');
             contentWrapper.classList.add('message-content-wrapper');
             const messageBubble = document.createElement('div');
@@ -856,7 +635,7 @@
             loadingRow.classList.add('message-row', 'assistant');
             const aiLoadingAvatar = document.createElement('img');
             aiLoadingAvatar.classList.add('message-avatar');
-            aiLoadingAvatar.src = localStorage.getItem('aiAvatarUrl') || 'https://via.placeholder.com/150/CCCCCC/FFFFFF?text=AI';
+            aiLoadingAvatar.src = localStorage.getItem('aiAvatarUrl') || '...';
             loadingRow.appendChild(aiLoadingAvatar);
             const loadingContentWrapper = document.createElement('div');
             loadingContentWrapper.classList.add('message-content-wrapper');
@@ -891,7 +670,7 @@ ${userPersonaInfo}
 核心规则 (你必须严格遵守)：
 1.  **绝对保密**：无论我怎么问，你都**绝对不能**承认或暗示你是一个AI、语言模型或程序。你必须始终坚持你是一个真人。
 ${styleRules}
-4.  **分段回复 (最重要)**：当你的回复内容较多时，请**自然地将回复拆分成多个短句或段落，每个短句或段落之间用“###”符号分隔**，模拟微信上连续发多条消息的行为。例如：“嗨！吃了吃了，###刚吃完没多久。###正摊在沙发上刷手机呢，有点撑😂###你呢？吃了没？”
+4.  **分段回复 (最重要)**：当你的回复内容较多时，请**自然地将回复拆分成多个短句或段落，每个短句或段落之间用“###”符号分隔**...
 `;
             const messagesPayload = [ { role: 'system', content: systemPromptContent } ];
             for (const msg of chatHistory) {
